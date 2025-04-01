@@ -66,3 +66,19 @@ The BigQuery Cost Intelligence Engine (BCIE) is designed to analyze large BigQue
 - **Integration Tests:** Create tests to verify interactions between modules
 - **End-to-End Tests:** Implement tests to validate complete workflows
 - **Performance Tests:** Run tests with varying dataset sizes
+
+## Development Environment Setup
+
+To set up the development environment for BigQuery Cost Intelligence Engine:
+
+1. Ensure Python 3.8+ is installed on your system
+2. Run the setup script: `./setup_dev.sh`
+3. The script will create a virtual environment and install all dependencies
+4. Activate the environment manually with: `source venv/bin/activate`
+5. Run tests with: `pytest tests/`
+
+### Common Issues
+
+- If Python commands aren't found, ensure the virtual environment is activated
+- For environment-specific settings, create a `.env` file in the project root
+- When deploying to production, use the `deploy.sh` script

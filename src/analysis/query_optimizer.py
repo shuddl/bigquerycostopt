@@ -5,6 +5,7 @@ import pandas as pd
 import numpy as np
 import re
 import json
+import hashlib
 from datetime import datetime, timedelta
 import sqlparse
 from sqlparse.sql import IdentifierList, Identifier, Token, Function, Parenthesis
@@ -73,7 +74,7 @@ class QueryOptimizer:
         query_history = self._get_query_history(dataset_id, days)
         
         # Skip analysis if no queries found
-        if not query_history or query_history.empty:
+        if query_history is None or query_history.empty:
             logger.warning(f"No query history found for dataset {dataset_id} in the last {days} days")
             return {
                 "dataset_id": dataset_id,
@@ -184,7 +185,7 @@ class QueryOptimizer:
         query_history = self._get_table_query_history(dataset_id, table_id, days)
         
         # Skip analysis if no queries found
-        if not query_history or query_history.empty:
+        if query_history is None or query_history.empty:
             logger.warning(f"No query history found for table {table_id} in the last {days} days")
             return {
                 "table_id": table_id,

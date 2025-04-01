@@ -862,6 +862,14 @@ class SchemaOptimizer:
                 break
         
         # Generate the cast expression based on the new type
+        # Find the column's current type
+        current_type = ""
+        for column in table_metadata.get("schema", []):
+            if column.get("name") == column_name:
+                current_type = column.get("type", "")
+                break
+        
+        # Generate the cast expression based on the new type
         cast_expr = f"CAST({column_name} AS {new_type})"
         
         if is_boolean_string:
@@ -871,13 +879,13 @@ class SchemaOptimizer:
     WHEN LOWER({column_name}) IN ('false', 'f', 'no', 'n', '0') THEN FALSE
     ELSE NULL
 END"""
-        elif new_type == "DATE" and "TIMESTAMP" in table_metadata.get("schema", {}).get(column_name, {}).get("type", ""):
+        elif new_type == "DATE" and "TIMESTAMP" in current_type:
             # For timestamp to date conversion
             cast_expr = f"DATE({column_name})"
-        elif new_type == "TIMESTAMP" and table_metadata.get("schema", {}).get(column_name, {}).get("type", "") == "STRING":
+        elif new_type == "TIMESTAMP" and current_type == "STRING":
             # For string to timestamp conversion
             cast_expr = f"PARSE_TIMESTAMP('%Y-%m-%d %H:%M:%S', {column_name})"
-        elif new_type == "DATE" and table_metadata.get("schema", {}).get(column_name, {}).get("type", "") == "STRING":
+        elif new_type == "DATE" and current_type == "STRING":
             # For string to date conversion
             cast_expr = f"PARSE_DATE('%Y-%m-%d', {column_name})"
             
