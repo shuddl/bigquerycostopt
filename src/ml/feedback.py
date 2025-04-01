@@ -99,7 +99,7 @@ class FeedbackCollector:
     def _store_local_feedback(self,
                             feedback_id: str,
                             implemented_recommendations: List[Dict[str, Any]],
-                            feedback_data: Dict[str, Any]]) -> None:
+                            feedback_data: Dict[str, Any]) -> None:
         """Store feedback data locally.
         
         Args:
@@ -165,7 +165,7 @@ class FeedbackCollector:
     def _store_cloud_feedback(self,
                             feedback_id: str,
                             implemented_recommendations: List[Dict[str, Any]],
-                            feedback_data: Dict[str, Any]]) -> None:
+                            feedback_data: Dict[str, Any]) -> None:
         """Store feedback data in BigQuery and GCS.
         
         Args:
