@@ -1,0 +1,187 @@
+{
+  "displayName": "BigQuery Cost Intelligence Engine Overview",
+  "dashboardFilters": [],
+  "gridLayout": {
+    "widgets": [
+      {
+        "title": "API Request Rate",
+        "xyChart": {
+          "chartOptions": {
+            "mode": "COLOR"
+          },
+          "dataSets": [
+            {
+              "timeSeriesQuery": {
+                "timeSeriesFilter": {
+                  "filter": "resource.type=\"cloud_run_revision\" AND resource.labels.service_name=\"bqcostopt-api\"",
+                  "aggregation": {
+                    "perSeriesAligner": "ALIGN_RATE",
+                    "crossSeriesReducer": "REDUCE_SUM",
+                    "groupByFields": []
+                  }
+                },
+                "unitOverride": "1"
+              },
+              "plotType": "LINE",
+              "minAlignmentPeriod": "60s",
+              "targetAxis": "Y1"
+            }
+          ],
+          "yAxis": {
+            "scale": "LINEAR",
+            "label": "Requests / second"
+          }
+        }
+      },
+      {
+        "title": "API Error Rate",
+        "xyChart": {
+          "chartOptions": {
+            "mode": "COLOR"
+          },
+          "dataSets": [
+            {
+              "timeSeriesQuery": {
+                "timeSeriesFilter": {
+                  "filter": "resource.type=\"cloud_run_revision\" AND resource.labels.service_name=\"bqcostopt-api\" AND metric.labels.response_code=\"500\"",
+                  "aggregation": {
+                    "perSeriesAligner": "ALIGN_RATE",
+                    "crossSeriesReducer": "REDUCE_SUM",
+                    "groupByFields": []
+                  }
+                },
+                "unitOverride": "1"
+              },
+              "plotType": "LINE",
+              "minAlignmentPeriod": "60s",
+              "targetAxis": "Y1"
+            }
+          ],
+          "yAxis": {
+            "scale": "LINEAR",
+            "label": "Errors / second"
+          }
+        }
+      },
+      {
+        "title": "Analysis Worker Execution Count",
+        "xyChart": {
+          "chartOptions": {
+            "mode": "COLOR"
+          },
+          "dataSets": [
+            {
+              "timeSeriesQuery": {
+                "timeSeriesFilter": {
+                  "filter": "resource.type=\"cloud_function\" AND resource.labels.function_name=\"bqcostopt-analysis-worker\"",
+                  "aggregation": {
+                    "perSeriesAligner": "ALIGN_RATE",
+                    "crossSeriesReducer": "REDUCE_SUM",
+                    "groupByFields": ["metric.labels.status"]
+                  }
+                },
+                "unitOverride": "1"
+              },
+              "plotType": "LINE",
+              "minAlignmentPeriod": "60s",
+              "targetAxis": "Y1",
+              "legendTemplate": "${metric.labels.status}"
+            }
+          ],
+          "yAxis": {
+            "scale": "LINEAR",
+            "label": "Executions / second"
+          }
+        }
+      },
+      {
+        "title": "Analysis Worker Execution Time",
+        "xyChart": {
+          "chartOptions": {
+            "mode": "COLOR"
+          },
+          "dataSets": [
+            {
+              "timeSeriesQuery": {
+                "timeSeriesFilter": {
+                  "filter": "resource.type=\"cloud_function\" AND resource.labels.function_name=\"bqcostopt-analysis-worker\" AND metric.type=\"cloudfunctions.googleapis.com/function/execution_times\"",
+                  "aggregation": {
+                    "perSeriesAligner": "ALIGN_PERCENTILE_50",
+                    "crossSeriesReducer": "REDUCE_MEAN",
+                    "groupByFields": []
+                  }
+                },
+                "unitOverride": "ms"
+              },
+              "plotType": "LINE",
+              "minAlignmentPeriod": "60s",
+              "targetAxis": "Y1"
+            }
+          ],
+          "yAxis": {
+            "scale": "LINEAR",
+            "label": "Execution time (ms)"
+          }
+        }
+      },
+      {
+        "title": "Analysis Results by Status",
+        "pieChart": {
+          "chartOptions": {
+            "mode": "STATS"
+          },
+          "dataSets": [
+            {
+              "timeSeriesQuery": {
+                "timeSeriesFilter": {
+                  "filter": "metric.type=\"logging.googleapis.com/user/analysis_results\" AND resource.type=\"global\"",
+                  "aggregation": {
+                    "perSeriesAligner": "ALIGN_SUM",
+                    "crossSeriesReducer": "REDUCE_SUM",
+                    "groupByFields": ["metric.labels.status"]
+                  }
+                }
+              }
+            }
+          ]
+        }
+      },
+      {
+        "title": "Recommendations by Type",
+        "pieChart": {
+          "chartOptions": {
+            "mode": "STATS"
+          },
+          "dataSets": [
+            {
+              "timeSeriesQuery": {
+                "timeSeriesFilter": {
+                  "filter": "metric.type=\"logging.googleapis.com/user/recommendations\" AND resource.type=\"global\"",
+                  "aggregation": {
+                    "perSeriesAligner": "ALIGN_SUM",
+                    "crossSeriesReducer": "REDUCE_SUM",
+                    "groupByFields": ["metric.labels.recommendation_type"]
+                  }
+                }
+              }
+            }
+          ]
+        }
+      },
+      {
+        "title": "Estimated Monthly Savings",
+        "text": {
+          "content": "## $${summary.estimated_monthly_savings}\n\nTotal potential monthly savings from all recommendations.",
+          "format": "MARKDOWN"
+        }
+      },
+      {
+        "title": "Implementation Success Rate",
+        "text": {
+          "content": "## ${summary.implementation_success_rate}%\n\nPercentage of recommendations implemented successfully.",
+          "format": "MARKDOWN"
+        }
+      }
+    ]
+  }
+}

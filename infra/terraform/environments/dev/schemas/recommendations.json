@@ -1,0 +1,174 @@
+[
+  {
+    "name": "recommendation_id",
+    "type": "STRING",
+    "mode": "REQUIRED",
+    "description": "Unique identifier for the recommendation"
+  },
+  {
+    "name": "analysis_id",
+    "type": "STRING",
+    "mode": "REQUIRED",
+    "description": "ID of the analysis that generated this recommendation"
+  },
+  {
+    "name": "project_id",
+    "type": "STRING",
+    "mode": "REQUIRED",
+    "description": "GCP project ID"
+  },
+  {
+    "name": "dataset_id",
+    "type": "STRING",
+    "mode": "REQUIRED",
+    "description": "BigQuery dataset ID"
+  },
+  {
+    "name": "recommendation_type",
+    "type": "STRING",
+    "mode": "REQUIRED",
+    "description": "Type of recommendation (partition, cluster, schema_optimization, etc.)"
+  },
+  {
+    "name": "target_table",
+    "type": "STRING",
+    "mode": "NULLABLE",
+    "description": "Target table for the recommendation"
+  },
+  {
+    "name": "target_query",
+    "type": "STRING",
+    "mode": "NULLABLE",
+    "description": "Target query for the recommendation"
+  },
+  {
+    "name": "creation_date",
+    "type": "TIMESTAMP",
+    "mode": "REQUIRED",
+    "description": "Date and time the recommendation was created"
+  },
+  {
+    "name": "status",
+    "type": "STRING",
+    "mode": "REQUIRED",
+    "description": "Status of the recommendation (active, implemented, dismissed, etc.)"
+  },
+  {
+    "name": "estimated_savings",
+    "type": "RECORD",
+    "mode": "NULLABLE",
+    "description": "Estimated savings from implementing the recommendation",
+    "fields": [
+      {
+        "name": "monthly",
+        "type": "FLOAT",
+        "mode": "NULLABLE",
+        "description": "Estimated monthly savings"
+      },
+      {
+        "name": "yearly",
+        "type": "FLOAT",
+        "mode": "NULLABLE",
+        "description": "Estimated yearly savings"
+      },
+      {
+        "name": "storage_bytes",
+        "type": "INTEGER",
+        "mode": "NULLABLE",
+        "description": "Estimated storage savings in bytes"
+      },
+      {
+        "name": "query_bytes_processed",
+        "type": "INTEGER",
+        "mode": "NULLABLE",
+        "description": "Estimated reduction in bytes processed by queries"
+      }
+    ]
+  },
+  {
+    "name": "priority_score",
+    "type": "FLOAT",
+    "mode": "REQUIRED",
+    "description": "Priority score for the recommendation (0-10)"
+  },
+  {
+    "name": "complexity",
+    "type": "INTEGER",
+    "mode": "REQUIRED",
+    "description": "Implementation complexity (1-5)"
+  },
+  {
+    "name": "risk_level",
+    "type": "STRING",
+    "mode": "REQUIRED",
+    "description": "Risk level (low, medium, high)"
+  },
+  {
+    "name": "details",
+    "type": "JSON",
+    "mode": "NULLABLE",
+    "description": "Detailed information about the recommendation"
+  },
+  {
+    "name": "implementation_steps",
+    "type": "STRING",
+    "mode": "REPEATED",
+    "description": "Steps to implement the recommendation"
+  },
+  {
+    "name": "implementation_sql",
+    "type": "STRING",
+    "mode": "NULLABLE",
+    "description": "SQL to implement the recommendation"
+  },
+  {
+    "name": "justification",
+    "type": "STRING",
+    "mode": "NULLABLE",
+    "description": "Justification for the recommendation"
+  },
+  {
+    "name": "ml_insights",
+    "type": "JSON",
+    "mode": "NULLABLE",
+    "description": "ML-derived insights about the recommendation"
+  },
+  {
+    "name": "ml_influenced_priority",
+    "type": "BOOLEAN",
+    "mode": "NULLABLE",
+    "description": "Whether ML influenced the priority score"
+  },
+  {
+    "name": "user_feedback",
+    "type": "RECORD",
+    "mode": "NULLABLE",
+    "description": "User feedback on the recommendation",
+    "fields": [
+      {
+        "name": "user_id",
+        "type": "STRING",
+        "mode": "NULLABLE",
+        "description": "ID of the user who provided feedback"
+      },
+      {
+        "name": "rating",
+        "type": "INTEGER",
+        "mode": "NULLABLE",
+        "description": "User rating (1-5)"
+      },
+      {
+        "name": "comments",
+        "type": "STRING",
+        "mode": "NULLABLE",
+        "description": "User comments"
+      },
+      {
+        "name": "feedback_date",
+        "type": "TIMESTAMP",
+        "mode": "NULLABLE",
+        "description": "Date and time feedback was provided"
+      }
+    ]
+  }
+]

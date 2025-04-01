@@ -17,10 +17,12 @@ fi
 echo "Activating virtual environment..."
 source venv/bin/activate
 
+# Upgrade pip
+pip install --upgrade pip
+
 # Install dependencies
 echo "Installing project dependencies..."
-pip install -e .
-pip install pytest pytest-cov black flake8
+pip install -e ".[dev]"
 
 # Verify installation
 echo "Verifying installation..."

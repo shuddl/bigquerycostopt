@@ -1,0 +1,216 @@
+[
+  {
+    "name": "implementation_id",
+    "type": "STRING",
+    "mode": "REQUIRED",
+    "description": "Unique identifier for the implementation"
+  },
+  {
+    "name": "recommendation_id",
+    "type": "STRING",
+    "mode": "REQUIRED",
+    "description": "ID of the recommendation that was implemented"
+  },
+  {
+    "name": "project_id",
+    "type": "STRING",
+    "mode": "REQUIRED",
+    "description": "GCP project ID"
+  },
+  {
+    "name": "dataset_id",
+    "type": "STRING",
+    "mode": "REQUIRED",
+    "description": "BigQuery dataset ID"
+  },
+  {
+    "name": "target_table",
+    "type": "STRING",
+    "mode": "NULLABLE",
+    "description": "Target table for the implementation"
+  },
+  {
+    "name": "implementation_date",
+    "type": "TIMESTAMP",
+    "mode": "REQUIRED",
+    "description": "Date and time of implementation"
+  },
+  {
+    "name": "implementation_status",
+    "type": "STRING",
+    "mode": "REQUIRED",
+    "description": "Status of the implementation (successful, failed, rolled_back)"
+  },
+  {
+    "name": "implemented_by",
+    "type": "STRING",
+    "mode": "NULLABLE",
+    "description": "ID of the user who implemented the recommendation"
+  },
+  {
+    "name": "implementation_method",
+    "type": "STRING",
+    "mode": "REQUIRED",
+    "description": "Method of implementation (manual, automated)"
+  },
+  {
+    "name": "sql_executed",
+    "type": "STRING",
+    "mode": "NULLABLE",
+    "description": "SQL that was executed for the implementation"
+  },
+  {
+    "name": "execution_time_seconds",
+    "type": "FLOAT",
+    "mode": "NULLABLE",
+    "description": "Time taken for the implementation to complete"
+  },
+  {
+    "name": "actual_savings",
+    "type": "RECORD",
+    "mode": "NULLABLE",
+    "description": "Actual savings realized from the implementation",
+    "fields": [
+      {
+        "name": "measurement_period_days",
+        "type": "INTEGER",
+        "mode": "NULLABLE",
+        "description": "Period over which savings were measured (days)"
+      },
+      {
+        "name": "storage_cost_saved",
+        "type": "FLOAT",
+        "mode": "NULLABLE",
+        "description": "Storage cost saved"
+      },
+      {
+        "name": "query_cost_saved",
+        "type": "FLOAT",
+        "mode": "NULLABLE",
+        "description": "Query cost saved"
+      },
+      {
+        "name": "total_cost_saved",
+        "type": "FLOAT",
+        "mode": "NULLABLE",
+        "description": "Total cost saved"
+      },
+      {
+        "name": "bytes_reduced",
+        "type": "INTEGER",
+        "mode": "NULLABLE",
+        "description": "Reduction in storage bytes"
+      }
+    ]
+  },
+  {
+    "name": "before_metrics",
+    "type": "RECORD",
+    "mode": "NULLABLE",
+    "description": "Metrics before implementation",
+    "fields": [
+      {
+        "name": "table_bytes",
+        "type": "INTEGER",
+        "mode": "NULLABLE",
+        "description": "Table size in bytes before implementation"
+      },
+      {
+        "name": "avg_query_bytes_processed",
+        "type": "INTEGER",
+        "mode": "NULLABLE",
+        "description": "Average bytes processed per query before implementation"
+      },
+      {
+        "name": "avg_query_execution_time_ms",
+        "type": "FLOAT",
+        "mode": "NULLABLE",
+        "description": "Average query execution time in ms before implementation"
+      }
+    ]
+  },
+  {
+    "name": "after_metrics",
+    "type": "RECORD",
+    "mode": "NULLABLE",
+    "description": "Metrics after implementation",
+    "fields": [
+      {
+        "name": "table_bytes",
+        "type": "INTEGER",
+        "mode": "NULLABLE",
+        "description": "Table size in bytes after implementation"
+      },
+      {
+        "name": "avg_query_bytes_processed",
+        "type": "INTEGER",
+        "mode": "NULLABLE",
+        "description": "Average bytes processed per query after implementation"
+      },
+      {
+        "name": "avg_query_execution_time_ms",
+        "type": "FLOAT",
+        "mode": "NULLABLE",
+        "description": "Average query execution time in ms after implementation"
+      }
+    ]
+  },
+  {
+    "name": "issues_encountered",
+    "type": "RECORD",
+    "mode": "REPEATED",
+    "description": "Any issues encountered during implementation",
+    "fields": [
+      {
+        "name": "issue_type",
+        "type": "STRING",
+        "mode": "REQUIRED",
+        "description": "Type of issue"
+      },
+      {
+        "name": "issue_description",
+        "type": "STRING",
+        "mode": "REQUIRED",
+        "description": "Description of the issue"
+      },
+      {
+        "name": "resolution",
+        "type": "STRING",
+        "mode": "NULLABLE",
+        "description": "How the issue was resolved"
+      }
+    ]
+  },
+  {
+    "name": "feedback",
+    "type": "RECORD",
+    "mode": "NULLABLE",
+    "description": "Feedback on the implementation",
+    "fields": [
+      {
+        "name": "user_id",
+        "type": "STRING",
+        "mode": "NULLABLE",
+        "description": "ID of the user who provided feedback"
+      },
+      {
+        "name": "rating",
+        "type": "INTEGER",
+        "mode": "NULLABLE",
+        "description": "User rating (1-5)"
+      },
+      {
+        "name": "comments",
+        "type": "STRING",
+        "mode": "NULLABLE",
+        "description": "User comments"
+      },
+      {
+        "name": "feedback_date",
+        "type": "TIMESTAMP",
+        "mode": "NULLABLE",
+        "description": "Date and time feedback was provided"
+      }
+    ]
+  }
+]

@@ -1,0 +1,214 @@
+[
+  {
+    "name": "analysis_id",
+    "type": "STRING",
+    "mode": "REQUIRED",
+    "description": "Unique identifier for the analysis"
+  },
+  {
+    "name": "project_id",
+    "type": "STRING",
+    "mode": "REQUIRED",
+    "description": "GCP project ID"
+  },
+  {
+    "name": "dataset_id",
+    "type": "STRING",
+    "mode": "REQUIRED",
+    "description": "BigQuery dataset ID"
+  },
+  {
+    "name": "analysis_date",
+    "type": "TIMESTAMP",
+    "mode": "REQUIRED",
+    "description": "Date and time of the analysis"
+  },
+  {
+    "name": "status",
+    "type": "STRING",
+    "mode": "REQUIRED",
+    "description": "Status of the analysis (completed, failed, etc.)"
+  },
+  {
+    "name": "summary",
+    "type": "RECORD",
+    "mode": "NULLABLE",
+    "description": "Summary of the analysis results",
+    "fields": [
+      {
+        "name": "total_tables",
+        "type": "INTEGER",
+        "mode": "NULLABLE",
+        "description": "Total number of tables analyzed"
+      },
+      {
+        "name": "total_bytes",
+        "type": "INTEGER",
+        "mode": "NULLABLE",
+        "description": "Total storage size of all tables (bytes)"
+      },
+      {
+        "name": "total_queries_analyzed",
+        "type": "INTEGER",
+        "mode": "NULLABLE",
+        "description": "Total number of queries analyzed"
+      },
+      {
+        "name": "estimated_monthly_cost",
+        "type": "FLOAT",
+        "mode": "NULLABLE",
+        "description": "Estimated monthly cost"
+      },
+      {
+        "name": "potential_savings",
+        "type": "FLOAT",
+        "mode": "NULLABLE",
+        "description": "Potential monthly savings from all recommendations"
+      }
+    ]
+  },
+  {
+    "name": "tables_analyzed",
+    "type": "RECORD",
+    "mode": "REPEATED",
+    "description": "Details of the tables that were analyzed",
+    "fields": [
+      {
+        "name": "table_id",
+        "type": "STRING",
+        "mode": "REQUIRED",
+        "description": "Table ID"
+      },
+      {
+        "name": "bytes",
+        "type": "INTEGER",
+        "mode": "NULLABLE",
+        "description": "Size of the table in bytes"
+      },
+      {
+        "name": "row_count",
+        "type": "INTEGER",
+        "mode": "NULLABLE",
+        "description": "Number of rows in the table"
+      },
+      {
+        "name": "creation_time",
+        "type": "TIMESTAMP",
+        "mode": "NULLABLE",
+        "description": "Creation time of the table"
+      },
+      {
+        "name": "last_modified_time",
+        "type": "TIMESTAMP",
+        "mode": "NULLABLE",
+        "description": "Last modified time of the table"
+      },
+      {
+        "name": "query_count_last_30d",
+        "type": "INTEGER",
+        "mode": "NULLABLE",
+        "description": "Number of queries on this table in the last 30 days"
+      },
+      {
+        "name": "is_partitioned",
+        "type": "BOOLEAN",
+        "mode": "NULLABLE",
+        "description": "Whether the table is partitioned"
+      },
+      {
+        "name": "is_clustered",
+        "type": "BOOLEAN",
+        "mode": "NULLABLE",
+        "description": "Whether the table is clustered"
+      }
+    ]
+  },
+  {
+    "name": "queries_analyzed",
+    "type": "RECORD",
+    "mode": "REPEATED",
+    "description": "Summary of the queries that were analyzed",
+    "fields": [
+      {
+        "name": "query_hash",
+        "type": "STRING",
+        "mode": "REQUIRED",
+        "description": "Hash of the query text"
+      },
+      {
+        "name": "execution_count",
+        "type": "INTEGER",
+        "mode": "NULLABLE",
+        "description": "Number of times the query was executed"
+      },
+      {
+        "name": "avg_bytes_processed",
+        "type": "INTEGER",
+        "mode": "NULLABLE",
+        "description": "Average bytes processed per query"
+      },
+      {
+        "name": "avg_execution_time_ms",
+        "type": "FLOAT",
+        "mode": "NULLABLE",
+        "description": "Average execution time in milliseconds"
+      },
+      {
+        "name": "total_slot_ms",
+        "type": "INTEGER",
+        "mode": "NULLABLE",
+        "description": "Total slot-ms consumed"
+      },
+      {
+        "name": "tables_referenced",
+        "type": "STRING",
+        "mode": "REPEATED",
+        "description": "Tables referenced by the query"
+      }
+    ]
+  },
+  {
+    "name": "analysis_errors",
+    "type": "RECORD",
+    "mode": "REPEATED",
+    "description": "Any errors encountered during analysis",
+    "fields": [
+      {
+        "name": "error_type",
+        "type": "STRING",
+        "mode": "REQUIRED",
+        "description": "Type of error"
+      },
+      {
+        "name": "error_message",
+        "type": "STRING",
+        "mode": "REQUIRED",
+        "description": "Error message"
+      },
+      {
+        "name": "affected_resource",
+        "type": "STRING",
+        "mode": "NULLABLE",
+        "description": "Resource affected by the error"
+      }
+    ]
+  },
+  {
+    "name": "analysis_duration_seconds",
+    "type": "FLOAT",
+    "mode": "NULLABLE",
+    "description": "Duration of the analysis in seconds"
+  },
+  {
+    "name": "user_id",
+    "type": "STRING",
+    "mode": "NULLABLE",
+    "description": "ID of the user who initiated the analysis"
+  },
+  {
+    "name": "callback_url",
+    "type": "STRING",
+    "mode": "NULLABLE",
+    "description": "Callback URL for analysis completion notification"
+  }
+]

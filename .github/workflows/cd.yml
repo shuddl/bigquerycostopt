@@ -1,0 +1,235 @@
+name: CD Pipeline
+
+on:
+  push:
+    branches: [ main ]
+    tags: [ 'v*' ]
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Environment to deploy to'
+        required: true
+        default: 'dev'
+        type: choice
+        options:
+        - dev
+        - staging
+        - prod
+
+env:
+  GCP_PROJECT_DEV: bqcostopt-dev
+  GCP_PROJECT_STAGING: bqcostopt-staging
+  GCP_PROJECT_PROD: bqcostopt-prod
+  GCP_REGION: us-central1
+
+jobs:
+  setup:
+    name: Setup Deployment
+    runs-on: ubuntu-latest
+    outputs:
+      environment: ${{ steps.set-env.outputs.environment }}
+      project_id: ${{ steps.set-env.outputs.project_id }}
+      version: ${{ steps.set-version.outputs.version }}
+    
+    steps:
+    - name: Determine environment
+      id: set-env
+      run: |
+        # Default values
+        ENVIRONMENT="dev"
+        PROJECT_ID=${{ env.GCP_PROJECT_DEV }}
+        
+        # For manual workflow run
+        if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+          ENVIRONMENT="${{ github.event.inputs.environment }}"
+          
+          if [[ "$ENVIRONMENT" == "staging" ]]; then
+            PROJECT_ID=${{ env.GCP_PROJECT_STAGING }}
+          elif [[ "$ENVIRONMENT" == "prod" ]]; then
+            PROJECT_ID=${{ env.GCP_PROJECT_PROD }}
+          fi
+        
+        # For tag push (e.g., v1.0.0)
+        elif [[ "${{ github.ref }}" == refs/tags/v* ]]; then
+          ENVIRONMENT="prod"
+          PROJECT_ID=${{ env.GCP_PROJECT_PROD }}
+        fi
+        
+        echo "environment=$ENVIRONMENT" >> $GITHUB_OUTPUT
+        echo "project_id=$PROJECT_ID" >> $GITHUB_OUTPUT
+    
+    - uses: actions/checkout@v3
+    
+    - name: Set version
+      id: set-version
+      run: |
+        if [[ "${{ github.ref }}" == refs/tags/v* ]]; then
+          VERSION=${GITHUB_REF#refs/tags/v}
+        else
+          VERSION=$(grep -m1 "version=" setup.py | cut -d'"' -f2)
+        fi
+        
+        echo "version=$VERSION" >> $GITHUB_OUTPUT
+
+  deploy-infrastructure:
+    name: Deploy Infrastructure
+    needs: setup
+    runs-on: ubuntu-latest
+    environment: ${{ needs.setup.outputs.environment }}
+    
+    permissions:
+      contents: 'read'
+      id-token: 'write'
+    
+    steps:
+    - uses: actions/checkout@v3
+    
+    - name: Authenticate to Google Cloud
+      uses: google-github-actions/auth@v1
+      with:
+        workload_identity_provider: ${{ secrets.WORKLOAD_IDENTITY_PROVIDER }}
+        service_account: ${{ secrets.TERRAFORM_SERVICE_ACCOUNT }}
+    
+    - name: Setup Terraform
+      uses: hashicorp/setup-terraform@v2
+      with:
+        terraform_version: 1.0.0
+    
+    - name: Terraform Init
+      run: |
+        cd infra/terraform/environments/${{ needs.setup.outputs.environment }}
+        terraform init
+    
+    - name: Terraform Plan
+      run: |
+        cd infra/terraform/environments/${{ needs.setup.outputs.environment }}
+        terraform plan -var="project_id=${{ needs.setup.outputs.project_id }}" \
+                      -var="api_version=${{ needs.setup.outputs.version }}" \
+                      -var="api_key=${{ secrets.API_KEY }}" \
+                      -var="alert_email=${{ secrets.ALERT_EMAIL }}" \
+                      -out=tfplan
+    
+    - name: Terraform Apply
+      run: |
+        cd infra/terraform/environments/${{ needs.setup.outputs.environment }}
+        terraform apply -auto-approve tfplan
+
+  build-and-deploy-api:
+    name: Build and Deploy API
+    needs: [setup, deploy-infrastructure]
+    runs-on: ubuntu-latest
+    environment: ${{ needs.setup.outputs.environment }}
+    
+    permissions:
+      contents: 'read'
+      id-token: 'write'
+    
+    steps:
+    - uses: actions/checkout@v3
+    
+    - name: Authenticate to Google Cloud
+      uses: google-github-actions/auth@v1
+      with:
+        workload_identity_provider: ${{ secrets.WORKLOAD_IDENTITY_PROVIDER }}
+        service_account: ${{ secrets.GCR_SERVICE_ACCOUNT }}
+    
+    - name: Set up Cloud SDK
+      uses: google-github-actions/setup-gcloud@v1
+    
+    - name: Configure Docker
+      run: gcloud auth configure-docker --quiet
+    
+    - name: Build and Push API Container
+      run: |
+        IMAGE_NAME=gcr.io/${{ needs.setup.outputs.project_id }}/bqcostopt-api:${{ needs.setup.outputs.version }}
+        docker build -t $IMAGE_NAME .
+        docker push $IMAGE_NAME
+    
+    - name: Deploy API to Cloud Run
+      run: |
+        gcloud run deploy bqcostopt-api \
+          --image=gcr.io/${{ needs.setup.outputs.project_id }}/bqcostopt-api:${{ needs.setup.outputs.version }} \
+          --platform=managed \
+          --region=${{ env.GCP_REGION }} \
+          --project=${{ needs.setup.outputs.project_id }} \
+          --quiet
+
+  deploy-functions:
+    name: Deploy Cloud Functions
+    needs: [setup, deploy-infrastructure]
+    runs-on: ubuntu-latest
+    environment: ${{ needs.setup.outputs.environment }}
+    
+    permissions:
+      contents: 'read'
+      id-token: 'write'
+    
+    steps:
+    - uses: actions/checkout@v3
+    
+    - name: Authenticate to Google Cloud
+      uses: google-github-actions/auth@v1
+      with:
+        workload_identity_provider: ${{ secrets.WORKLOAD_IDENTITY_PROVIDER }}
+        service_account: ${{ secrets.FUNCTIONS_SERVICE_ACCOUNT }}
+    
+    - name: Set up Cloud SDK
+      uses: google-github-actions/setup-gcloud@v1
+    
+    - name: Deploy Analysis Worker Function
+      run: |
+        cd function_source/analysis_worker
+        gcloud functions deploy bqcostopt-analysis-worker \
+          --runtime=python39 \
+          --entry-point=process_analysis_request \
+          --trigger-topic=bqcostopt-analysis-requests \
+          --region=${{ env.GCP_REGION }} \
+          --project=${{ needs.setup.outputs.project_id }} \
+          --memory=2048MB \
+          --timeout=540s
+
+  run-tests:
+    name: Run Integration Tests
+    needs: [setup, build-and-deploy-api, deploy-functions]
+    if: needs.setup.outputs.environment != 'prod'
+    runs-on: ubuntu-latest
+    environment: ${{ needs.setup.outputs.environment }}
+    
+    steps:
+    - uses: actions/checkout@v3
+    
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.9'
+        cache: 'pip'
+    
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install pytest requests
+        pip install -e .
+    
+    - name: Run integration tests
+      env:
+        API_KEY: ${{ secrets.API_KEY }}
+        API_URL: https://bqcostopt-api-xxxxxxx-uc.a.run.app  # This should be dynamically fetched
+      run: |
+        pytest tests/integration/
+
+  notify:
+    name: Send Deployment Notification
+    needs: [setup, build-and-deploy-api, deploy-functions, run-tests]
+    if: always()
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Slack Notification
+      uses: rtCamp/action-slack-notify@v2
+      env:
+        SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}
+        SLACK_CHANNEL: "#deployments"
+        SLACK_TITLE: "Deployment to ${{ needs.setup.outputs.environment }}"
+        SLACK_MESSAGE: "Deployment of BigQuery Cost Intelligence Engine v${{ needs.setup.outputs.version }} to ${{ needs.setup.outputs.environment }} ${{ needs.run-tests.result == 'success' || needs.setup.outputs.environment == 'prod' ? 'was successful! ✅' : 'failed! ❌' }}"
+        SLACK_COLOR: ${{ needs.run-tests.result == 'success' || needs.setup.outputs.environment == 'prod' ? 'good' : 'danger' }}
+        MSG_MINIMAL: false

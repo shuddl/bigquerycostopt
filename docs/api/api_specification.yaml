@@ -1,0 +1,666 @@
+openapi: 3.0.0
+info:
+  title: BigQuery Cost Intelligence Engine API
+  description: |
+    API for the BigQuery Cost Intelligence Engine, which provides cost optimization recommendations for BigQuery datasets.
+  version: 1.0.0
+  contact:
+    email: support@example.com
+servers:
+  - url: https://bqcostopt-api-{env}.a.run.app
+    description: Cloud Run endpoint
+    variables:
+      env:
+        enum:
+          - dev
+          - staging
+          - prod
+        default: prod
+        description: Environment (dev, staging, prod)
+security:
+  - ApiKeyHeader: []
+
+paths:
+  /api/v1/health:
+    get:
+      summary: Health check endpoint
+      description: Returns the current status of the API service
+      operationId: getHealth
+      tags:
+        - System
+      responses:
+        '200':
+          description: API service is healthy
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    enum: [OK]
+                  version:
+                    type: string
+                  timestamp:
+                    type: string
+                    format: date-time
+
+  /api/v1/analyze:
+    post:
+      summary: Trigger a BigQuery dataset analysis
+      description: Initiates an asynchronous analysis of a BigQuery dataset to generate optimization recommendations
+      operationId: analyzeDataset
+      tags:
+        - Analysis
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - project_id
+                - dataset_id
+              properties:
+                project_id:
+                  type: string
+                  description: GCP project ID containing the dataset
+                dataset_id:
+                  type: string
+                  description: BigQuery dataset ID to analyze
+                callback_url:
+                  type: string
+                  format: uri
+                  description: Optional webhook URL for completion notification
+      responses:
+        '202':
+          description: Analysis request submitted successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  analysis_id:
+                    type: string
+                    description: Unique identifier for the analysis
+                  status:
+                    type: string
+                    enum: [pending]
+                  message:
+                    type: string
+        '400':
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /api/v1/analysis/{analysis_id}:
+    get:
+      summary: Get analysis status and results
+      description: Returns the status and results of a previously submitted analysis
+      operationId: getAnalysisStatus
+      tags:
+        - Analysis
+      parameters:
+        - name: analysis_id
+          in: path
+          description: ID of the analysis
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Analysis status retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AnalysisStatus'
+        '404':
+          description: Analysis not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /api/v1/recommendations:
+    get:
+      summary: List recommendations
+      description: Returns a list of recommendations based on the provided filters
+      operationId: listRecommendations
+      tags:
+        - Recommendations
+      parameters:
+        - name: project_id
+          in: query
+          description: Filter by GCP project ID
+          schema:
+            type: string
+        - name: dataset_id
+          in: query
+          description: Filter by BigQuery dataset ID
+          schema:
+            type: string
+        - name: status
+          in: query
+          description: Filter by recommendation status
+          schema:
+            type: string
+            enum: [active, implemented, dismissed]
+        - name: recommendation_type
+          in: query
+          description: Filter by recommendation type
+          schema:
+            type: string
+        - name: min_priority
+          in: query
+          description: Minimum priority score
+          schema:
+            type: number
+            format: float
+            minimum: 0
+            maximum: 10
+        - name: limit
+          in: query
+          description: Maximum number of recommendations to return
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+        - name: offset
+          in: query
+          description: Number of recommendations to skip
+          schema:
+            type: integer
+            minimum: 0
+            default: 0
+      responses:
+        '200':
+          description: Recommendations retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  recommendations:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Recommendation'
+                  total_count:
+                    type: integer
+                  next_offset:
+                    type: integer
+        '400':
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /api/v1/recommendations/{recommendation_id}:
+    get:
+      summary: Get recommendation details
+      description: Returns detailed information about a specific recommendation
+      operationId: getRecommendation
+      tags:
+        - Recommendations
+      parameters:
+        - name: recommendation_id
+          in: path
+          description: ID of the recommendation
+          required: true
+          schema:
+            type: string
+        - name: include_implementation_plan
+          in: query
+          description: Whether to include detailed implementation plan
+          schema:
+            type: boolean
+            default: false
+      responses:
+        '200':
+          description: Recommendation retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RecommendationDetail'
+        '404':
+          description: Recommendation not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /api/v1/recommendations/{recommendation_id}/implement:
+    post:
+      summary: Implement a recommendation
+      description: Triggers the implementation of a specific recommendation
+      operationId: implementRecommendation
+      tags:
+        - Recommendations
+      parameters:
+        - name: recommendation_id
+          in: path
+          description: ID of the recommendation to implement
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                dry_run:
+                  type: boolean
+                  description: Whether to perform a dry run without actually making changes
+                  default: false
+                callback_url:
+                  type: string
+                  format: uri
+                  description: Optional webhook URL for completion notification
+      responses:
+        '202':
+          description: Implementation request submitted successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  implementation_id:
+                    type: string
+                  status:
+                    type: string
+                    enum: [pending]
+                  message:
+                    type: string
+        '400':
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Recommendation not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /api/v1/recommendations/{recommendation_id}/feedback:
+    post:
+      summary: Provide feedback on a recommendation
+      description: Submits user feedback about a recommendation
+      operationId: provideFeedback
+      tags:
+        - Recommendations
+      parameters:
+        - name: recommendation_id
+          in: path
+          description: ID of the recommendation
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - rating
+              properties:
+                rating:
+                  type: integer
+                  minimum: 1
+                  maximum: 5
+                  description: User rating (1-5)
+                comments:
+                  type: string
+                  description: Optional user comments
+                actual_savings:
+                  type: number
+                  format: float
+                  description: Actual cost savings realized (if known)
+                implementation_time:
+                  type: integer
+                  description: Time taken to implement in minutes (if known)
+      responses:
+        '200':
+          description: Feedback submitted successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+        '404':
+          description: Recommendation not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /api/v1/summary:
+    get:
+      summary: Get optimization summary
+      description: Returns a summary of optimization opportunities and savings
+      operationId: getSummary
+      tags:
+        - Summary
+      parameters:
+        - name: project_id
+          in: query
+          description: Filter by GCP project ID
+          schema:
+            type: string
+        - name: timeframe
+          in: query
+          description: Timeframe for the summary
+          schema:
+            type: string
+            enum: [last_7_days, last_30_days, last_90_days, all_time]
+            default: last_30_days
+      responses:
+        '200':
+          description: Summary retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OptimizationSummary'
+        '400':
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+components:
+  securitySchemes:
+    ApiKeyHeader:
+      type: apiKey
+      in: header
+      name: X-API-Key
+      description: API key for authentication
+
+  schemas:
+    Error:
+      type: object
+      required:
+        - error
+      properties:
+        error:
+          type: string
+        details:
+          type: string
+
+    AnalysisStatus:
+      type: object
+      properties:
+        analysis_id:
+          type: string
+        project_id:
+          type: string
+        dataset_id:
+          type: string
+        status:
+          type: string
+          enum: [pending, running, completed, failed]
+        progress:
+          type: integer
+          minimum: 0
+          maximum: 100
+        message:
+          type: string
+        start_time:
+          type: string
+          format: date-time
+        end_time:
+          type: string
+          format: date-time
+        summary:
+          type: object
+          properties:
+            total_tables:
+              type: integer
+            total_bytes:
+              type: integer
+            total_queries_analyzed:
+              type: integer
+            estimated_monthly_cost:
+              type: number
+              format: float
+            potential_savings:
+              type: number
+              format: float
+        errors:
+          type: array
+          items:
+            type: object
+            properties:
+              error_type:
+                type: string
+              error_message:
+                type: string
+              affected_resource:
+                type: string
+
+    Recommendation:
+      type: object
+      properties:
+        recommendation_id:
+          type: string
+        project_id:
+          type: string
+        dataset_id:
+          type: string
+        recommendation_type:
+          type: string
+        target_table:
+          type: string
+        creation_date:
+          type: string
+          format: date-time
+        status:
+          type: string
+          enum: [active, implemented, dismissed]
+        estimated_savings:
+          type: object
+          properties:
+            monthly:
+              type: number
+              format: float
+            yearly:
+              type: number
+              format: float
+        priority_score:
+          type: number
+          format: float
+        complexity:
+          type: integer
+          minimum: 1
+          maximum: 5
+        risk_level:
+          type: string
+          enum: [low, medium, high]
+        justification:
+          type: string
+
+    RecommendationDetail:
+      allOf:
+        - $ref: '#/components/schemas/Recommendation'
+        - type: object
+          properties:
+            details:
+              type: object
+            implementation_steps:
+              type: array
+              items:
+                type: string
+            implementation_sql:
+              type: string
+            ml_insights:
+              type: object
+              properties:
+                business_impact_category:
+                  type: string
+                business_impact:
+                  type: number
+                  format: float
+                pattern_name:
+                  type: string
+                pattern_description:
+                  type: string
+                is_anomaly:
+                  type: boolean
+                business_context:
+                  type: string
+            user_feedback:
+              type: object
+              properties:
+                rating:
+                  type: integer
+                  minimum: 1
+                  maximum: 5
+                comments:
+                  type: string
+                feedback_date:
+                  type: string
+                  format: date-time
+
+    OptimizationSummary:
+      type: object
+      properties:
+        project_id:
+          type: string
+        timeframe:
+          type: string
+        timestamp:
+          type: string
+          format: date-time
+        current_monthly_cost:
+          type: number
+          format: float
+        potential_monthly_savings:
+          type: number
+          format: float
+        savings_percentage:
+          type: number
+          format: float
+        implemented_monthly_savings:
+          type: number
+          format: float
+        recommendation_counts:
+          type: object
+          properties:
+            total:
+              type: integer
+            active:
+              type: integer
+            implemented:
+              type: integer
+            dismissed:
+              type: integer
+        savings_by_type:
+          type: array
+          items:
+            type: object
+            properties:
+              recommendation_type:
+                type: string
+              count:
+                type: integer
+              monthly_savings:
+                type: number
+                format: float
+        top_recommendations:
+          type: array
+          items:
+            $ref: '#/components/schemas/Recommendation'

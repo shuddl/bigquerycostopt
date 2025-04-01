@@ -1,83 +1,114 @@
 #!/bin/bash
 
-# Deployment script for BigQuery Cost Intelligence Engine
+# Deployment script for BigQuery Cost Intelligence Engine using Terraform
 
 set -e
 
 # Configuration
-PROJECT_ID=${1:-""}
-REGION=${2:-"us-central1"}
-SERVICE_NAME="bqcost-engine"
+ENVIRONMENT=${1:-"dev"}
+PROJECT_ID=${2:-""}
+REGION=${3:-"us-central1"}
+API_VERSION=${4:-"latest"}
 
 # Check if project ID is provided
 if [ -z "$PROJECT_ID" ]; then
     echo "Error: GCP project ID is required"
-    echo "Usage: ./deploy.sh PROJECT_ID [REGION]"
+    echo "Usage: ./deploy.sh [ENVIRONMENT] PROJECT_ID [REGION] [API_VERSION]"
+    echo "  ENVIRONMENT: dev, staging, prod (default: dev)"
+    echo "  PROJECT_ID: GCP project ID (required)"
+    echo "  REGION: GCP region (default: us-central1)"
+    echo "  API_VERSION: API version to deploy (default: latest)"
     exit 1
 fi
 
-echo "Deploying BigQuery Cost Intelligence Engine to project: $PROJECT_ID in region: $REGION"
+# Validate environment
+if [[ ! "$ENVIRONMENT" =~ ^(dev|staging|prod)$ ]]; then
+    echo "Error: ENVIRONMENT must be one of: dev, staging, prod"
+    exit 1
+fi
+
+echo "Deploying BigQuery Cost Intelligence Engine ($ENVIRONMENT environment)"
+echo "Project: $PROJECT_ID"
+echo "Region: $REGION"
+echo "API Version: $API_VERSION"
+
+# Verify Terraform installation
+if ! command -v terraform &> /dev/null; then
+    echo "Error: terraform is not installed or not in PATH"
+    exit 1
+fi
 
 # Ensure gcloud is configured with the correct project
 gcloud config set project $PROJECT_ID
 
-# Create Pub/Sub topics
-echo "Creating Pub/Sub topics..."
-gcloud pubsub topics create analysis-requests --project=$PROJECT_ID || echo "Topic already exists"
-gcloud pubsub topics create analysis-results --project=$PROJECT_ID || echo "Topic already exists"
+# Build API Docker image
+echo "Building API Docker image..."
+docker build -t gcr.io/$PROJECT_ID/bqcostopt-api:$API_VERSION .
 
-# Create service account for the application
-echo "Creating service account..."
-SERVICE_ACCOUNT="${SERVICE_NAME}@${PROJECT_ID}.iam.gserviceaccount.com"
-gcloud iam service-accounts create $SERVICE_NAME \
-    --display-name="BigQuery Cost Intelligence Engine Service Account" \
-    --project=$PROJECT_ID || echo "Service account already exists"
+echo "Pushing Docker image to Container Registry..."
+docker push gcr.io/$PROJECT_ID/bqcostopt-api:$API_VERSION
 
-# Grant necessary permissions
-echo "Granting IAM permissions..."
-gcloud projects add-iam-policy-binding $PROJECT_ID \
-    --member="serviceAccount:${SERVICE_ACCOUNT}" \
-    --role="roles/bigquery.dataViewer"
+# Create function_source.zip for Cloud Functions
+echo "Creating function source archive..."
+(cd function_source/analysis_worker && zip -r ../../../function_source.zip .)
 
-gcloud projects add-iam-policy-binding $PROJECT_ID \
-    --member="serviceAccount:${SERVICE_ACCOUNT}" \
-    --role="roles/bigquery.jobUser"
+# Navigate to Terraform directory for the specified environment
+TERRAFORM_DIR="infra/terraform/environments/$ENVIRONMENT"
+cd $TERRAFORM_DIR
 
-gcloud projects add-iam-policy-binding $PROJECT_ID \
-    --member="serviceAccount:${SERVICE_ACCOUNT}" \
-    --role="roles/pubsub.publisher"
+# Generate API key if not provided
+if [ -z "$API_KEY" ]; then
+    API_KEY=$(openssl rand -base64 32)
+    echo "Generated API key: $API_KEY"
+    echo "WARNING: Store this API key securely. It will not be shown again."
+fi
 
-gcloud projects add-iam-policy-binding $PROJECT_ID \
-    --member="serviceAccount:${SERVICE_ACCOUNT}" \
-    --role="roles/pubsub.subscriber"
+# Initialize Terraform
+echo "Initializing Terraform..."
+terraform init
 
-# Create BigQuery dataset for storing recommendations
-echo "Creating BigQuery dataset for recommendations..."
-bq --location=$REGION mk \
-    --dataset \
-    --description="BigQuery Cost Intelligence Engine Recommendations" \
-    ${PROJECT_ID}:bqcost_recommendations || echo "Dataset already exists"
+# Create Terraform variables file
+cat > terraform.tfvars << EOF
+project_id = "$PROJECT_ID"
+region = "$REGION"
+api_version = "$API_VERSION"
+api_key = "$API_KEY"
+alert_email = "admin@example.com"
+EOF
 
-# Deploy Cloud Run service
-echo "Building and deploying API service to Cloud Run..."
-gcloud builds submit --tag gcr.io/$PROJECT_ID/$SERVICE_NAME
+if [ "$ENVIRONMENT" = "prod" ]; then
+    echo "key_dataset_id = \"your_key_dataset\"" >> terraform.tfvars
+    echo "pagerduty_service_key = \"your_pagerduty_key\"" >> terraform.tfvars
+fi
 
-gcloud run deploy $SERVICE_NAME \
-    --image gcr.io/$PROJECT_ID/$SERVICE_NAME \
-    --platform managed \
-    --region $REGION \
-    --service-account $SERVICE_ACCOUNT \
-    --set-env-vars="GCP_PROJECT_ID=${PROJECT_ID},ANALYSIS_REQUEST_TOPIC=analysis-requests" \
-    --allow-unauthenticated
+# Plan Terraform changes
+echo "Planning Terraform changes..."
+terraform plan -var-file=terraform.tfvars -out=tfplan
 
-# Get the service URL
-SERVICE_URL=$(gcloud run services describe $SERVICE_NAME --platform managed --region $REGION --format 'value(status.url)')
-
-echo "\nDeployment completed successfully!"
-echo "API Service URL: $SERVICE_URL"
-echo "\nTo test the API:"
-echo "curl -X POST \\
-  -H 'Content-Type: application/json' \\
-  -H 'X-API-Key: your-api-key-here' \\
-  -d '{\"project_id\":\"$PROJECT_ID\", \"dataset_id\":\"your_dataset_id\"}' \\
-  $SERVICE_URL/api/v1/analyze"
+# Apply Terraform changes with confirmation
+echo "Applying Terraform changes..."
+read -p "Continue with deployment? (y/n) " -n 1 -r
+echo
+if [[ $REPLY =~ ^[Yy]$ ]]; then
+    terraform apply tfplan
+    
+    # Get outputs
+    API_URL=$(terraform output -raw api_url)
+    
+    echo "Deployment completed successfully!"
+    echo "API Service URL: $API_URL"
+    echo
+    echo "To test the API:"
+    echo "curl -X GET \\"
+    echo "  -H 'X-API-Key: $API_KEY' \\"
+    echo "  $API_URL/api/v1/health"
+    echo
+    echo "To analyze a dataset:"
+    echo "curl -X POST \\"
+    echo "  -H 'Content-Type: application/json' \\"
+    echo "  -H 'X-API-Key: $API_KEY' \\"
+    echo "  -d '{\"project_id\":\"$PROJECT_ID\", \"dataset_id\":\"your_dataset_id\"}' \\"
+    echo "  $API_URL/api/v1/analyze"
+else
+    echo "Deployment cancelled."
+fi
