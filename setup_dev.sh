@@ -22,7 +22,11 @@ pip install --upgrade pip
 
 # Install dependencies
 echo "Installing project dependencies..."
-pip install -e ".[dev]"
+pip install -e ".[dev,test]"
+
+# Ensure required packages are installed
+echo "Ensuring required test packages are installed..."
+pip install tqdm joblib scikit-learn matplotlib
 
 # Verify installation
 echo "Verifying installation..."
