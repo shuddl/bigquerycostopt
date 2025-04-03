@@ -19,7 +19,13 @@ setup(
         "scikit-learn>=1.0.0",
         "joblib>=1.1.0",
         "tqdm>=4.62.0",
-        "matplotlib>=3.4.0"
+        "matplotlib>=3.4.0",
+        "scipy>=1.7.0",
+        "statsmodels>=0.13.0",
+        "prophet>=1.1.0",
+        "fastapi>=0.68.0",
+        "uvicorn>=0.15.0",
+        "pydantic>=1.8.0"
     ],
     extras_require={
         "dev": [

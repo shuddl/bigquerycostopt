@@ -9,15 +9,17 @@ ENVIRONMENT=${1:-"dev"}
 PROJECT_ID=${2:-""}
 REGION=${3:-"us-central1"}
 API_VERSION=${4:-"latest"}
+API_SERVER_TYPE=${5:-"fastapi"}  # Options: flask, fastapi
 
 # Check if project ID is provided
 if [ -z "$PROJECT_ID" ]; then
     echo "Error: GCP project ID is required"
-    echo "Usage: ./deploy.sh [ENVIRONMENT] PROJECT_ID [REGION] [API_VERSION]"
+    echo "Usage: ./deploy.sh [ENVIRONMENT] PROJECT_ID [REGION] [API_VERSION] [API_SERVER_TYPE]"
     echo "  ENVIRONMENT: dev, staging, prod (default: dev)"
     echo "  PROJECT_ID: GCP project ID (required)"
     echo "  REGION: GCP region (default: us-central1)"
     echo "  API_VERSION: API version to deploy (default: latest)"
+    echo "  API_SERVER_TYPE: flask or fastapi (default: fastapi)"
     exit 1
 fi
 
@@ -31,6 +33,7 @@ echo "Deploying BigQuery Cost Intelligence Engine ($ENVIRONMENT environment)"
 echo "Project: $PROJECT_ID"
 echo "Region: $REGION"
 echo "API Version: $API_VERSION"
+echo "API Server Type: $API_SERVER_TYPE"
 
 # Verify Terraform installation
 if ! command -v terraform &> /dev/null; then
@@ -73,7 +76,9 @@ project_id = "$PROJECT_ID"
 region = "$REGION"
 api_version = "$API_VERSION"
 api_key = "$API_KEY"
+api_server_type = "$API_SERVER_TYPE"
 alert_email = "admin@example.com"
+enable_cost_dashboard = "true"
 EOF
 
 if [ "$ENVIRONMENT" = "prod" ]; then
@@ -109,6 +114,11 @@ if [[ $REPLY =~ ^[Yy]$ ]]; then
     echo "  -H 'X-API-Key: $API_KEY' \\"
     echo "  -d '{\"project_id\":\"$PROJECT_ID\", \"dataset_id\":\"your_dataset_id\"}' \\"
     echo "  $API_URL/api/v1/analyze"
+    echo
+    echo "To use the Cost Attribution Dashboard:"
+    echo "curl -X GET \\"
+    echo "  -H 'X-API-Key: $API_KEY' \\"
+    echo "  $API_URL/api/v1/cost-dashboard/summary?project_id=$PROJECT_ID&days=30"
 else
     echo "Deployment cancelled."
 fi

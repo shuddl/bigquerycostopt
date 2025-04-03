@@ -1,155 +1,407 @@
-# BigQuery Cost Attribution Dashboard User Guide
+# BigQuery Cost Attribution Dashboard Guide
 
-## Introduction
+This guide explains how to use the BigQuery Cost Attribution Dashboard with Anomaly Detection to track and optimize your BigQuery costs.
 
-The BigQuery Cost Attribution Dashboard is a comprehensive solution for analyzing, attributing, and optimizing your BigQuery spending. This tool helps you understand exactly where your BigQuery costs are coming from, detect unusual spending patterns, and implement cost-saving recommendations.
+## Overview
 
-## Features
+The Cost Attribution Dashboard provides comprehensive visibility into your BigQuery spending with the following key features:
 
-### Cost Attribution Module
-
-- **User and Team Attribution**: Track costs across users, teams, projects, and query patterns
-- **Hierarchical Cost Explorer**: Drill down from organization to individual queries
-- **Cost Trend Analysis**: Visualize spending patterns over time with customizable time periods
-- **Automatic Team Mapping**: Attribute users to teams for organizational cost visibility
-- **Query Pattern Detection**: Identify costly query patterns and optimization opportunities
-
-### Anomaly Detection
-
-- **Statistical Anomaly Detection**: Identify unusual spending patterns using z-score analysis
-- **Machine Learning Enhancement**: Advanced anomaly detection using isolation forests
-- **Forecast & Prediction**: Predict future costs and detect deviations from expected patterns
-- **User Behavior Clustering**: Group users by similar spending patterns for targeted optimization
-- **Real-time Alerts**: Get notified of cost spikes as they happen
-
-### Recommendation Action Center
-
-- **Prioritized Optimization Recommendations**: View cost-saving opportunities sorted by ROI
-- **Implementation Workflow**: Preview, verify, and implement recommendations with safety checks
-- **SQL Generation**: Automatically generate implementation and verification SQL
-- **Impact Assessment**: Understand the potential impact before implementation
-- **Implementation Tracking**: Track the status and effectiveness of implemented recommendations
-
-### Visualization & Reporting
-
-- **Interactive Timeline**: Visualize cost trends with anomaly highlighting
-- **Custom Dashboards**: Create tailored views for different stakeholders
-- **Exportable Reports**: Export data and insights in various formats
-- **Retool Integration**: Seamlessly integrate with your existing Retool dashboards
+- **Cost Attribution**: Track costs by user, team, query pattern, and dataset
+- **Anomaly Detection**: Identify unusual spending patterns using statistical and ML-based approaches
+- **Cost Forecasting**: Predict future costs based on historical usage patterns
+- **User Behavior Analysis**: Cluster users based on their query patterns and costs
+- **Cost Alerts**: Get notified about significant cost increases
 
 ## Getting Started
 
-### Prerequisites
-
-- Google Cloud Platform project with BigQuery enabled
-- Service account with appropriate BigQuery permissions
-- Python 3.9+ for backend components
-- Retool account for dashboard access
-
 ### Installation
 
-1. Install the Python package:
-   ```bash
-   pip install -e .
+To install and set up the BigQuery Cost Attribution Dashboard:
+
+1. Install the package with ML dependencies:
+   ```
+   pip install -e ".[ml]"
    ```
 
-2. Configure authentication:
-   - Create a service account with BigQuery permissions
-   - Download the service account key file
-   - Set the `GOOGLE_APPLICATION_CREDENTIALS` environment variable
+2. Set up your authentication:
+   ```
+   export GOOGLE_APPLICATION_CREDENTIALS="/path/to/service-account-key.json"
+   ```
+   
+   The service account must have the following permissions:
+   - `bigquery.jobs.list`
+   - `bigquery.tables.get`
+   - `bigquery.tables.list`
 
-3. Set up the dashboard:
-   - Import the Retool application from the provided JSON files
-   - Configure the API endpoints in Retool
-   - Set up team mapping (optional)
+3. Start the API server:
+   ```
+   python -m bigquerycostopt.src.api.server --server-type fastapi
+   ```
 
-## Usage Guide
+### Configuration
 
-### Cost Attribution Analysis
+Configure the dashboard by setting the following environment variables:
 
-1. Navigate to the **Cost Explorer** tab
-2. Select the desired time period using the date range selector
-3. Use the drill-down interface to navigate through the cost hierarchy:
-   - Organization → Project → User → Query Pattern → Query
-4. Filter results by team, cost threshold, or query type
-5. Export reports for further analysis or sharing
+- `GCP_PROJECT_ID`: Your Google Cloud project ID
+- `API_PORT`: Port for the API server (default: 8080)
+- `API_HOST`: Host for the API server (default: 0.0.0.0)
+- `API_SERVER_TYPE`: Server implementation to use (flask or fastapi)
+- `API_DEBUG`: Enable debug mode (true or false)
+
+## Dashboard Components
+
+### Cost Explorer
+
+The Cost Explorer provides hierarchical drill-down into your BigQuery costs:
+
+1. **Project-level view**: Overall cost summary with trends
+2. **Team breakdown**: Costs attributed to different teams
+3. **User breakdown**: Individual user costs within teams
+4. **Query pattern analysis**: Costs by query type and pattern
+5. **Dataset/table usage**: Costs by dataset and table
+
+### Anomaly Detection Timeline
+
+The Anomaly Detection Timeline helps you spot unusual spending patterns:
+
+1. **Daily cost anomalies**: Unusually high or low daily spending
+2. **User-based anomalies**: Users with unexpected spending patterns
+3. **Team-based anomalies**: Teams with unusual cost trends
+4. **Pattern-based anomalies**: Unusual query pattern distributions
+
+### Recommendation Action Center
+
+The Recommendation Action Center provides actionable cost-saving recommendations:
+
+1. **Query optimizations**: Suggestions for improving expensive queries
+2. **Schema optimizations**: Recommendations for table structure improvements
+3. **Storage optimizations**: Ideas for reducing storage costs
+4. **Implementation planning**: Generate implementation scripts for recommendations
+
+## API Reference
+
+The Cost Attribution Dashboard is accessible through a RESTful API that supports both Flask and FastAPI implementations.
+
+### Authentication
+
+All API endpoints require authentication. Provide an API key in the Authorization header:
+
+```
+Authorization: Bearer YOUR_API_KEY
+```
+
+### Endpoints
+
+#### Cost Summary
+
+```
+GET /api/v1/cost-dashboard/summary
+```
+
+Query parameters:
+- `project_id` (required): GCP project ID
+- `days` (optional): Number of days to analyze (default: 30)
+
+#### Cost Attribution
+
+```
+GET /api/v1/cost-dashboard/attribution
+```
+
+Query parameters:
+- `project_id` (required): GCP project ID
+- `days` (optional): Number of days to analyze (default: 30)
+- `dimensions` (optional): Comma-separated list of attribution dimensions (default: user,team,pattern,day,table)
+
+#### Cost Trends
+
+```
+GET /api/v1/cost-dashboard/trends
+```
+
+Query parameters:
+- `project_id` (required): GCP project ID
+- `days` (optional): Number of days to analyze (default: 90)
+- `granularity` (optional): Time granularity (day, week, month) (default: day)
+
+#### Period Comparison
+
+```
+GET /api/v1/cost-dashboard/compare-periods
+```
+
+Query parameters:
+- `project_id` (required): GCP project ID
+- `current_days` (optional): Number of days in current period (default: 30)
+- `previous_days` (optional): Number of days in previous period (default: 30)
+
+#### Expensive Queries
+
+```
+GET /api/v1/cost-dashboard/expensive-queries
+```
+
+Query parameters:
+- `project_id` (required): GCP project ID
+- `days` (optional): Number of days to analyze (default: 30)
+- `limit` (optional): Maximum number of queries to return (default: 100)
+
+#### Cost Anomalies
+
+```
+GET /api/v1/cost-dashboard/anomalies
+```
+
+Query parameters:
+- `project_id` (required): GCP project ID
+- `days` (optional): Number of days to analyze (default: 30)
+- `anomaly_types` (optional): Comma-separated list of anomaly types (default: daily,user,team,pattern)
+- `use_ml` (optional): Whether to use ML-enhanced anomaly detection (default: false)
+
+#### Cost Forecast
+
+```
+GET /api/v1/cost-dashboard/forecast
+```
+
+Query parameters:
+- `project_id` (required): GCP project ID
+- `training_days` (optional): Number of days to use for training (default: 90)
+- `forecast_days` (optional): Number of days to forecast (default: 7)
+
+#### User Clusters
+
+```
+GET /api/v1/cost-dashboard/user-clusters
+```
+
+Query parameters:
+- `project_id` (required): GCP project ID
+- `days` (optional): Number of days to analyze (default: 90)
+- `n_clusters` (optional): Number of clusters to generate (default: 5)
+
+#### Team Mapping
+
+```
+POST /api/v1/cost-dashboard/team-mapping
+```
+
+Request body:
+```json
+{
+  "project_id": "your-project-id",
+  "mapping": {
+    "user1@example.com": "Team A",
+    "user2@example.com": "Team B",
+    "*@engineering.example.com": "Engineering"
+  }
+}
+```
+
+#### Cost Alerts
+
+```
+GET /api/v1/cost-dashboard/alerts
+```
+
+Query parameters:
+- `project_id` (required): GCP project ID
+- `days` (optional): Number of days to look back (default: 7)
+- `min_cost_increase_usd` (optional): Minimum cost increase to trigger alert (default: 100.0)
+
+## Retool Integration
+
+The Cost Attribution Dashboard is designed to integrate seamlessly with Retool dashboards.
+
+### Setting Up Retool
+
+1. Create a new Retool application
+2. Add a REST API resource pointing to your API server
+3. Configure authentication with your API key
+4. Create the following queries:
+
+### Example Retool Components
+
+#### Cost Summary Component
+
+```javascript
+// Query: costSummary
+{
+  method: 'GET',
+  url: `/api/v1/cost-dashboard/summary`,
+  params: {
+    project_id: {{ projectId.value }},
+    days: {{ daysSlider.value }}
+  }
+}
+
+// Display component
+<Container>
+  <Heading>Cost Summary</Heading>
+  <Statistic 
+    value={{ formatCurrency(costSummary.data.summary.total_cost_usd) }} 
+    label="Total Cost" 
+  />
+  <Statistic 
+    value={{ formatCurrency(costSummary.data.summary.daily_avg_cost_usd) }} 
+    label="Daily Average" 
+  />
+  <Statistic 
+    value={{ costSummary.data.summary.total_queries }} 
+    label="Total Queries" 
+  />
+</Container>
+```
+
+#### Cost Trends Chart
+
+```javascript
+// Query: costTrends
+{
+  method: 'GET',
+  url: `/api/v1/cost-dashboard/trends`,
+  params: {
+    project_id: {{ projectId.value }},
+    days: {{ daysSlider.value }},
+    granularity: {{ granularitySelect.value }}
+  }
+}
+
+// Display component
+<Container>
+  <Heading>Cost Trends</Heading>
+  <LineChart 
+    data={{ costTrends.data.trends }}
+    x="period"
+    y="total_cost_usd"
+    yAxisTitle="Cost (USD)"
+  />
+</Container>
+```
+
+#### Anomaly Detection Timeline
+
+```javascript
+// Query: costAnomalies
+{
+  method: 'GET',
+  url: `/api/v1/cost-dashboard/anomalies`,
+  params: {
+    project_id: {{ projectId.value }},
+    days: {{ daysSlider.value }},
+    use_ml: {{ useMLSwitch.value }}
+  }
+}
+
+// Display component
+<Container>
+  <Heading>Cost Anomalies</Heading>
+  <Table 
+    data={{ costAnomalies.data.anomalies.daily_anomalies }}
+    columns={[
+      { header: 'Date', accessorKey: 'date' },
+      { header: 'Actual Cost', accessorKey: 'total_cost_usd', formatter: 'currency' },
+      { header: 'Expected Cost', accessorKey: 'expected_cost_usd', formatter: 'currency' },
+      { header: 'Change', accessorKey: 'percent_change', formatter: 'percent' },
+      { header: 'Z-Score', accessorKey: 'z_score' }
+    ]}
+  />
+</Container>
+```
+
+## Client Usage
+
+You can use the included Python client to interact with the API programmatically:
+
+```python
+from bigquerycostopt.examples.cost_dashboard_client import CostDashboardClient
+
+# Initialize client
+client = CostDashboardClient(base_url="http://localhost:8080", api_key="your-api-key")
+
+# Get cost summary for the last 30 days
+summary = client.get_cost_summary("your-project-id", days=30)
+
+# Get cost attribution data
+attribution = client.get_cost_attribution("your-project-id", days=30)
+
+# Get cost anomalies with ML enhancement
+anomalies = client.get_anomalies("your-project-id", days=30, use_ml=True)
+
+# Get cost forecast for the next 14 days
+forecast = client.get_forecast("your-project-id", training_days=90, forecast_days=14)
+```
+
+You can also run the client as a standalone script:
+
+```
+python -m bigquerycostopt.examples.cost_dashboard_client --project-id=your-project-id --days=30 --use-ml --visualize
+```
+
+## Best Practices
+
+### Cost Attribution
+
+1. **Set up team mapping**: Use the team mapping API to correctly attribute costs to teams
+2. **Use consistent project structure**: Organize datasets by team or function for better attribution
+3. **Add user labels**: Add labels to your queries for more detailed attribution
 
 ### Anomaly Detection
 
-1. Go to the **Anomaly Timeline** view
-2. Select a time range and granularity (daily, weekly, monthly)
-3. Identify highlighted anomalies on the timeline
-4. Click on anomaly points to view details:
-   - Deviation from expected costs
-   - Contributing factors
-   - Related queries
-5. Configure alerts for future anomalies
+1. **Start with statistical anomalies**: Begin with basic statistical anomaly detection before using ML
+2. **Adjust thresholds**: Fine-tune the anomaly detection thresholds based on your usage patterns
+3. **Combine with alerting**: Set up alerts for significant anomalies to be notified in real-time
 
-### Using the Recommendation Action Center
+### Cost Optimization
 
-1. Access the **Recommendations** tab
-2. Filter and sort recommendations based on type, status, or potential savings
-3. Review the details of each recommendation
-4. To implement a recommendation:
-   - Click "Implement" to start the workflow
-   - Review the SQL and impact assessment
-   - Verify the changes
-   - Confirm and execute
-5. Track implementation history and results in the History tab
+1. **Focus on high-impact areas**: Prioritize optimizations for your most expensive query patterns
+2. **Regular reviews**: Schedule regular cost review sessions with stakeholders
+3. **Implement and verify**: Track the impact of implemented optimizations over time
 
-## Technical Details
+## Advanced Topics
 
-### Architecture
+### Custom Machine Learning Models
 
-The system consists of:
-- **Python Backend**: Handles data collection, analysis, and recommendation generation
-- **BigQuery Storage**: Stores cost data, recommendations, and implementation history
-- **Retool Frontend**: Provides the user interface and visualization components
+You can extend the ML-based anomaly detection with custom models:
 
-### APIs and Integration Points
+1. Create a subclass of `MLCostAnomalyDetector`
+2. Override the `train` and `predict` methods
+3. Register your model in the `detect_anomalies_with_ml` function
 
-- **Cost Attribution API**: Retrieves and analyzes cost data
-- **Anomaly Detection API**: Identifies and explains unusual spending patterns
-- **Recommendation Engine API**: Generates and manages cost-saving recommendations
-- **BigQuery API**: Executes implementation SQL and verification queries
+### Integrating with Monitoring Systems
 
-### Custom Extensions
+The Cost Attribution Dashboard can be integrated with monitoring systems:
 
-The system supports various extension points:
-- **Custom Team Mapping**: Define your own user-to-team mapping logic
-- **Alert Integrations**: Connect to Slack, email, or other notification systems
-- **Custom Recommendation Types**: Add specialized recommendations for your environment
+1. Use the alerts API to fetch cost alerts
+2. Push alerts to your monitoring system (e.g., PagerDuty, Slack)
+3. Set up automated responses to cost anomalies
+
+### Multi-Project Aggregation
+
+For organizations with multiple projects:
+
+1. Deploy the API server with access to all projects
+2. Create a metadata table to store project information
+3. Implement custom aggregation logic to combine costs across projects
 
 ## Troubleshooting
 
 ### Common Issues
 
-- **Data Access Errors**: Check service account permissions
-- **Missing Cost Data**: Verify BigQuery audit logging is enabled
-- **Recommendation Failures**: Check impact assessment for potential conflicts
+1. **Authentication errors**: Ensure your service account has the necessary permissions
+2. **Missing data**: Check that your BigQuery usage logs are enabled
+3. **API timeouts**: For large datasets, increase the API request timeout
 
-### Logs and Diagnostics
+### Debugging
 
-- Backend logs are stored in the application's log directory
-- Implementation history provides audit trails for all actions
-- Error details are captured in the UI for failed operations
+1. Enable debug mode with `--debug` or `API_DEBUG=true`
+2. Check the API server logs for detailed error information
+3. Validate your API requests with a tool like Postman
 
-## Roadmap and Future Enhancements
+## Getting Help
 
-The following features are planned for future releases:
+If you encounter issues or have questions:
 
-- **Multi-project Comparison**: Compare costs across multiple GCP projects
-- **Anomaly Classification**: Categorize anomalies by root cause
-- **Custom Recommendation Rules**: Create your own recommendation rules
-- **Integration with Terraform**: Implement recommendations via infrastructure as code
-- **Advanced ML Models**: Enhanced prediction accuracy using more sophisticated models
-
-## Contributing
-
-Contributions are welcome! Please see our contributor guidelines for details on how to submit bug reports, feature requests, and pull requests.
-
-## Support and Resources
-
-- For technical support, contact your administrator
-- For feature requests, please open an issue on GitHub
-- Documentation: [Full API Documentation](https://github.com/yourusername/bigquerycostopt)
+1. Check the documentation in the `/docs` directory
+2. Submit issues via GitHub
+3. Contact the support team at support@example.com

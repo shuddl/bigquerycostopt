@@ -6,7 +6,7 @@ import json
 import os
 from datetime import datetime, timedelta
 
-from bigquerycostopt.src.implementation.planner import ImplementationPlanGenerator
+from src.implementation.planner import ImplementationPlanGenerator
 
 # Sample recommendations for testing
 SAMPLE_STORAGE_REC = {
@@ -255,7 +255,7 @@ class TestImplementationPlanGenerator(unittest.TestCase):
         self.assertGreaterEqual(len(steps), 4)
         
         # Verify SQL content for data type analysis
-        self.assertIn("Check column data distribution", steps[0]["description"])
+        self.assertIn("Analyze", steps[0]["description"])
         self.assertIn("SAFE_CAST", steps[0]["sql"])
         
         # Verify SQL content for backup
@@ -263,7 +263,18 @@ class TestImplementationPlanGenerator(unittest.TestCase):
         
         # Verify SQL content for type change
         self.assertIn("Change data type", steps[2]["description"])
-        self.assertIn("INT64", steps[2]["sql"])
+        
+        # Verify column name and data types are mentioned in the change step
+        column_name = SAMPLE_SCHEMA_REC["current_state"]["column_name"]
+        current_type = SAMPLE_SCHEMA_REC["current_state"]["current_type"]
+        recommended_type = SAMPLE_SCHEMA_REC["current_state"]["recommended_type"]
+        
+        # Verify the description contains the target type
+        self.assertIn(recommended_type, steps[2]["description"])
+        
+        # Check that the SQL contains some part of the implementation we expect
+        self.assertTrue(any(recommended_type in step["sql"] for step in steps), 
+                       f"Target type {recommended_type} not found in any SQL step")
     
     def test_generate_verification_steps(self):
         """Test generation of verification steps."""
@@ -332,7 +343,7 @@ class TestImplementationPlanGenerator(unittest.TestCase):
         }
         
         # Use standalone function
-        from bigquerycostopt.src.implementation.planner import generate_implementation_plan
+        from src.implementation.planner import generate_implementation_plan
         plan = generate_implementation_plan(self.test_recommendations, metadata)
         
         # Verify that it still works

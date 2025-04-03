@@ -13,7 +13,12 @@ import json
 import hashlib
 from pathlib import Path
 from google.cloud import bigquery
-from google.cloud import storage
+try:
+    from google.cloud import storage
+    _has_storage = True
+except ImportError:
+    _has_storage = False
+    storage = None
 
 from ..utils.logging import setup_logger
 
@@ -55,12 +60,26 @@ class FeedbackCollector:
         try:
             if credentials_path:
                 self.bq_client = bigquery.Client.from_service_account_json(credentials_path)
-                self.storage_client = storage.Client.from_service_account_json(credentials_path)
             else:
                 self.bq_client = bigquery.Client(project=project_id)
-                self.storage_client = storage.Client(project=project_id)
                 
-            self.use_cloud_storage = True
+            # Setup storage client if the module is available
+            if _has_storage and storage is not None:
+                try:
+                    if credentials_path:
+                        self.storage_client = storage.Client.from_service_account_json(credentials_path)
+                    else:
+                        self.storage_client = storage.Client(project=project_id)
+                    self.use_cloud_storage = True
+                except Exception as e:
+                    logger.warning(f"Failed to initialize Storage client: {e}. Cloud storage features will be disabled.")
+                    self.storage_client = None
+                    self.use_cloud_storage = False
+            else:
+                self.storage_client = None
+                self.use_cloud_storage = False
+                logger.warning("Google Cloud Storage not available. Install with 'pip install google-cloud-storage'")
+                
             logger.info(f"Initialized GCP clients for project {project_id}")
         except Exception as e:
             logger.warning(f"Failed to initialize GCP clients: {e}. Will use local storage only.")
@@ -174,28 +193,36 @@ class FeedbackCollector:
             feedback_data: Feedback data about the implementations
         """
         try:
-            # Store raw feedback data in GCS
-            bucket_name = f"{self.project_id}-bqoptimizer-feedback"
-            blob_name = f"feedback/{feedback_id}.json"
-            
-            # Check if bucket exists, create if not
-            try:
-                bucket = self.storage_client.get_bucket(bucket_name)
-            except Exception:
-                bucket = self.storage_client.create_bucket(bucket_name)
-                logger.info(f"Created feedback storage bucket: {bucket_name}")
-            
-            # Upload feedback data to GCS
-            blob = bucket.blob(blob_name)
+            # Prepare storage data
             storage_data = {
                 "feedback_id": feedback_id,
                 "feedback_data": feedback_data,
                 "recommendations": implemented_recommendations,
                 "timestamp": datetime.datetime.now().isoformat()
             }
-            blob.upload_from_string(json.dumps(storage_data, default=str))
             
-            logger.info(f"Uploaded feedback data to GCS: gs://{bucket_name}/{blob_name}")
+            # Store raw feedback data in GCS if available
+            if self.use_cloud_storage and _has_storage and storage is not None and self.storage_client:
+                try:
+                    bucket_name = f"{self.project_id}-bqoptimizer-feedback"
+                    blob_name = f"feedback/{feedback_id}.json"
+                    
+                    # Check if bucket exists, create if not
+                    try:
+                        bucket = self.storage_client.get_bucket(bucket_name)
+                    except Exception:
+                        bucket = self.storage_client.create_bucket(bucket_name)
+                        logger.info(f"Created feedback storage bucket: {bucket_name}")
+                    
+                    # Upload feedback data to GCS
+                    blob = bucket.blob(blob_name)
+                    blob.upload_from_string(json.dumps(storage_data, default=str))
+                    
+                    logger.info(f"Uploaded feedback data to GCS: gs://{bucket_name}/{blob_name}")
+                except Exception as e:
+                    logger.warning(f"Error uploading to Cloud Storage: {e}. Continuing with BigQuery storage.")
+            else:
+                logger.warning("Google Cloud Storage not available. Skipping GCS upload.")
             
             # Store structured feedback data in BigQuery
             dataset_id = f"{self.project_id}.bqoptimizer"

@@ -92,6 +92,8 @@ module "iam" {
       description  = "Service account for the BigQuery Cost Intelligence Engine API"
       roles        = [
         "roles/pubsub.publisher",
+        "roles/bigquery.dataViewer",
+        "roles/bigquery.jobUser",
         "roles/monitoring.metricWriter",
         "roles/logging.logWriter"
       ]
@@ -104,6 +106,7 @@ module "iam" {
         "roles/bigquery.dataViewer",
         "roles/bigquery.jobUser",
         "roles/bigquery.metadataViewer",
+        "roles/bigquery.user", 
         "roles/pubsub.subscriber",
         "roles/pubsub.publisher",
         "roles/storage.objectAdmin",
@@ -168,15 +171,21 @@ module "api_service" {
   service_account_email = module.iam.service_account_emails[local.service_accounts.api_service]
   
   env_vars = {
-    GCP_PROJECT_ID        = var.project_id
-    ANALYSIS_REQUEST_TOPIC = module.pubsub.topic_name
-    ENVIRONMENT           = local.environment
+    GCP_PROJECT_ID           = var.project_id
+    ANALYSIS_REQUEST_TOPIC   = module.pubsub.topic_name
+    ENVIRONMENT              = local.environment
+    API_SERVER_TYPE          = var.api_server_type
+    WEBHOOK_SECRET           = "secret-${local.environment}"
+    API_KEY                  = var.api_key
+    CACHE_TTL_SECONDS        = "300"
+    ML_ENABLED               = "true"
+    ENABLE_COST_DASHBOARD    = var.enable_cost_dashboard
   }
   
   secret_env_vars = []
   
   cpu             = "1"
-  memory          = "1Gi"
+  memory          = "2Gi"
   concurrency     = 80
   timeout         = 300
   max_instances   = 10
@@ -217,6 +226,35 @@ module "bigquery" {
       schema_file      = "${path.module}/schemas/implementation_history.json"
       partitioning_type = "MONTH"
       partitioning_field = "implementation_date"
+    },
+    {
+      table_id         = "cost_attribution"
+      description      = "BigQuery cost attribution data by user, team, and query pattern"
+      schema_file      = null
+      clustering_fields = ["project_id", "user_email"]
+      partitioning_type = "DAY"
+      partitioning_field = "date"
+    },
+    {
+      table_id         = "cost_anomalies"
+      description      = "Detected cost anomalies"
+      schema_file      = null
+      clustering_fields = ["anomaly_type", "project_id"]
+      partitioning_type = "DAY"
+      partitioning_field = "detection_date"
+    },
+    {
+      table_id         = "cost_forecasts"
+      description      = "Cost forecasts"
+      schema_file      = null
+      partitioning_type = "DAY"
+      partitioning_field = "generation_date"
+    },
+    {
+      table_id         = "team_mapping"
+      description      = "Mapping of users to teams for cost attribution"
+      schema_file      = null
+      clustering_fields = ["team"]
     }
   ]
   
@@ -230,6 +268,26 @@ module "bigquery" {
       view_id      = "savings_by_project"
       description  = "Estimated savings by project"
       query        = file("${path.module}/sql/savings_by_project.sql")
+    },
+    {
+      view_id      = "cost_by_team"
+      description  = "Cost attribution by team"
+      query        = "SELECT date, team, SUM(total_cost_usd) as total_cost_usd, COUNT(DISTINCT user_email) as user_count, SUM(query_count) as query_count FROM `${var.project_id}.bqcostopt.cost_attribution` GROUP BY date, team ORDER BY date DESC, total_cost_usd DESC"
+    },
+    {
+      view_id      = "cost_by_user"
+      description  = "Cost attribution by user"
+      query        = "SELECT date, user_email, team, SUM(total_cost_usd) as total_cost_usd, SUM(query_count) as query_count FROM `${var.project_id}.bqcostopt.cost_attribution` GROUP BY date, user_email, team ORDER BY date DESC, total_cost_usd DESC"
+    },
+    {
+      view_id      = "cost_trends_daily"
+      description  = "Daily cost trends"
+      query        = "SELECT date, SUM(total_cost_usd) as total_cost_usd, COUNT(DISTINCT user_email) as user_count, COUNT(DISTINCT team) as team_count, SUM(query_count) as query_count FROM `${var.project_id}.bqcostopt.cost_attribution` GROUP BY date ORDER BY date DESC"
+    },
+    {
+      view_id      = "recent_anomalies"
+      description  = "Recent cost anomalies"
+      query        = "SELECT * FROM `${var.project_id}.bqcostopt.cost_anomalies` WHERE detection_date >= TIMESTAMP_SUB(CURRENT_TIMESTAMP(), INTERVAL 30 DAY) ORDER BY detection_date DESC, severity DESC"
     }
   ]
   
@@ -357,6 +415,9 @@ module "monitoring" {
         path = "/api/v1/health"
         port = 443
         use_ssl = true
+        headers = {
+          "X-API-Key" = var.api_key
+        }
       }
       monitored_resource = {
         type = "uptime_url"

@@ -6,7 +6,7 @@ import json
 import os
 from datetime import datetime, timedelta
 
-from bigquerycostopt.src.analysis.schema_optimizer import SchemaOptimizer
+from src.analysis.schema_optimizer import SchemaOptimizer
 
 # Sample table metadata for testing
 SAMPLE_TABLE_METADATA = {

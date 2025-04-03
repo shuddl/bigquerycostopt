@@ -6,7 +6,7 @@ import json
 import os
 from datetime import datetime, timedelta
 
-from bigquerycostopt.src.analysis.storage_optimizer import StorageOptimizer
+from src.analysis.storage_optimizer import StorageOptimizer
 
 # Sample table metadata for testing
 SAMPLE_TABLE_METADATA = {

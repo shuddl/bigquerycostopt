@@ -54,6 +54,17 @@ class QueryOptimizer:
         self._schema_cache = {}
         # Cache for query parsing results
         self._query_parse_cache = {}
+        self.preprocessor = None
+
+    def train(self, X_train):
+        if self.preprocessor is None:
+            self.preprocessor = StandardScaler()
+            self.preprocessor.fit(X_train)
+
+    def predict(self, X):
+        if self.preprocessor is None:
+            raise ValueError("Preprocessor not initialized. Call train() first.")
+        return self.preprocessor.transform(X)
     
     def analyze_dataset_queries(self, dataset_id: str, days: int = DEFAULT_ANALYSIS_PERIOD_DAYS) -> Dict[str, Any]:
         """Analyze queries for a dataset and identify optimization opportunities.

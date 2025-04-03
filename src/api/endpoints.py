@@ -5,12 +5,17 @@ from google.cloud import pubsub_v1
 import json
 import os
 import uuid
+import datetime
 
 from ..utils.logging import setup_logger
 from ..utils.security import validate_request
+from .cost_dashboard import cost_dashboard_bp
 
 app = Flask(__name__)
 logger = setup_logger(__name__)
+
+# Register blueprints
+app.register_blueprint(cost_dashboard_bp)
 
 # Initialize Pub/Sub publisher
 publisher = pubsub_v1.PublisherClient()

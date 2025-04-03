@@ -28,6 +28,17 @@ pip install -e ".[dev,test]"
 echo "Ensuring required test packages are installed..."
 pip install tqdm joblib scikit-learn matplotlib
 
+# Install ML-specific dependencies
+echo "Installing ML dependencies..."
+pip install -r requirements_ml.txt
+
+# Handle potential conflicts with special attention to Prophet dependencies
+echo "Handling dependency conflicts..."
+# Prophet requires specific pystan version
+pip install "pystan<3.0.0"
+pip install prophet --no-deps
+pip install numpy pandas holidays
+
 # Verify installation
 echo "Verifying installation..."
 python --version

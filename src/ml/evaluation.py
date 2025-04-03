@@ -10,8 +10,14 @@ import numpy as np
 import logging
 import datetime
 import json
-import matplotlib.pyplot as plt
 from pathlib import Path
+
+# Conditionally import matplotlib
+try:
+    import matplotlib.pyplot as plt
+    _has_matplotlib = True
+except ImportError:
+    _has_matplotlib = False
 
 from ..utils.logging import setup_logger
 
@@ -429,6 +435,11 @@ class EvaluationMetrics:
             evaluation_metrics: Dictionary of evaluation metrics
             timestamp: Timestamp string for filenames
         """
+        # Skip if matplotlib is not available
+        if not _has_matplotlib:
+            logger.warning("Matplotlib not available, skipping visualization generation")
+            return
+            
         # Create directory for visualizations
         vis_dir = self.output_dir / "visualizations"
         vis_dir.mkdir(exist_ok=True)

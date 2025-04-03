@@ -27,3 +27,15 @@ variable "alert_email" {
   description = "Email address for alerting"
   type        = string
 }
+
+variable "api_server_type" {
+  description = "Type of API server to use (flask or fastapi)"
+  type        = string
+  default     = "fastapi"
+}
+
+variable "enable_cost_dashboard" {
+  description = "Whether to enable the cost attribution dashboard"
+  type        = bool
+  default     = true
+}

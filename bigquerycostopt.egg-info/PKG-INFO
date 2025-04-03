@@ -1,17 +1,45 @@
-Metadata-Version: 2.1
+Metadata-Version: 2.2
 Name: bigquerycostopt
 Version: 0.1.0
 Summary: BigQuery Cost Intelligence Engine
-Home-page: UNKNOWN
 Author: Your Name
 Author-email: your.email@example.com
-License: UNKNOWN
-Platform: UNKNOWN
 Classifier: Development Status :: 3 - Alpha
 Classifier: Intended Audience :: Developers
 Classifier: Topic :: Software Development :: Libraries
 Classifier: Programming Language :: Python :: 3.9
 Requires-Python: >=3.9
-
-UNKNOWN
-
+Requires-Dist: google-cloud-bigquery>=2.30.0
+Requires-Dist: google-cloud-pubsub>=2.8.0
+Requires-Dist: google-cloud-storage>=2.0.0
+Requires-Dist: pandas>=1.3.0
+Requires-Dist: numpy>=1.20.0
+Requires-Dist: flask>=2.0.0
+Requires-Dist: gunicorn>=20.1.0
+Requires-Dist: requests>=2.25.0
+Requires-Dist: scikit-learn>=1.0.0
+Requires-Dist: joblib>=1.1.0
+Requires-Dist: tqdm>=4.62.0
+Requires-Dist: matplotlib>=3.4.0
+Requires-Dist: scipy>=1.7.0
+Requires-Dist: statsmodels>=0.13.0
+Requires-Dist: prophet>=1.1.0
+Requires-Dist: fastapi>=0.68.0
+Requires-Dist: uvicorn>=0.15.0
+Requires-Dist: pydantic>=1.8.0
+Provides-Extra: dev
+Requires-Dist: pytest>=6.0.0; extra == "dev"
+Requires-Dist: pytest-cov>=2.12.0; extra == "dev"
+Requires-Dist: black>=21.5b2; extra == "dev"
+Requires-Dist: flake8>=3.9.0; extra == "dev"
+Requires-Dist: isort>=5.9.0; extra == "dev"
+Provides-Extra: test
+Requires-Dist: pytest>=6.0.0; extra == "test"
+Requires-Dist: pytest-cov>=2.12.0; extra == "test"
+Dynamic: author
+Dynamic: author-email
+Dynamic: classifier
+Dynamic: provides-extra
+Dynamic: requires-dist
+Dynamic: requires-python
+Dynamic: summary

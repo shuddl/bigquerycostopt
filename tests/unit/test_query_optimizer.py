@@ -7,7 +7,7 @@ import json
 import os
 from datetime import datetime, timedelta
 
-from bigquerycostopt.src.analysis.query_optimizer import QueryOptimizer
+from src.analysis.query_optimizer import QueryOptimizer
 
 # Sample test queries
 SELECT_STAR_QUERY = """
